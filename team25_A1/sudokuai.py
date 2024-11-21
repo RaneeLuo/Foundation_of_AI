@@ -37,8 +37,9 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
 
 
 
+# Given i and j ,function to find which rectangle it belongs to 
 
-def compute_location(i, j, n, m):
+    def compute_location(self,i, j, n, m):
         x = math.ceil(i / n)
         y = math.ceil(j / m)
 
@@ -48,8 +49,10 @@ def compute_location(i, j, n, m):
 
         return range_row, range_column
     
-    def possible_moves(value,i,j,n,m):
-        range_row , range_column = compute_location(i,j,n,m)
+    def possible_moves(self,value,i,j,n,m,game_state : GameState):
+        x = math.ceil(i / n)
+        y = math.ceil(j / m)
+        range_row , range_column = self.compute_location(i,j,n,m)
         if(value > n*m and value < 1):
             return False
         
@@ -63,3 +66,41 @@ def compute_location(i, j, n, m):
             for column in range (range_column[0], range_column[1]):
                 if (game_state.board.get(row,column)==value):
                     return False
+
+
+import math
+ 
+def minimax (curDepth, nodeIndex,
+             maxTurn, scores, 
+             targetDepth):
+ 
+    # base case : targetDepth reached
+    if (curDepth == targetDepth): 
+        return scores[nodeIndex]
+     
+    if (maxTurn):
+        return max(minimax(curDepth + 1, nodeIndex * 2, 
+                    False, scores, targetDepth), 
+                   minimax(curDepth + 1, nodeIndex * 2 + 1, 
+                    False, scores, targetDepth))
+     
+    else:
+        return min(minimax(curDepth + 1, nodeIndex * 2, 
+                     True, scores, targetDepth), 
+                   minimax(curDepth + 1, nodeIndex * 2 + 1, 
+                     True, scores, targetDepth))
+     
+# Driver code
+scores = [3, 5, 2, 9, 12, 5, 23, 23]
+ 
+treeDepth = math.log(len(scores), 2)
+ 
+print("The optimal value is : ", end = "")
+print(minimax(0, 0, True, scores, treeDepth))
+ 
+# This code is contributed
+# by rootshadow            
+                
+    
+    
+    
