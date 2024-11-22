@@ -33,17 +33,41 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
 
             return range_row, range_column
         
-        def possible_moves(value,i,j,n,m):
-            x = math.ceil(i / n)
-            y = math.ceil(j / m)
-            range_row , range_column = self.compute_location(i,j,n,m)
-            if(value > n*m and value < 1):
+        def possible_columns(value, j):
+            if(value > (n*m+1) and value < 1):
                 return False
             
-            for row in range (n*m):
-                if(game_state.board.get((row,y))== value ):
+            for row in range (N):
+                if(game_state.board.get((row,j))== value ):
                     return False
-                if(game_state.board.get((x,row))==value ):
+            return True
+        
+        def possible_rows(value, i):
+            
+            for row in range (N):
+                if(game_state.board.get((i,row))== value ):
+                    return False
+            return True
+        
+        def possible_squares(value,i,j,n,m):
+            range_row , range_column = self.compute_location(i,j,n,m)
+            for row in range (range_row[0], range_row[1]):
+                for column in range (range_column[0], range_column[1]):
+                    if (game_state.board.get((row,column))==value):
+                        return False
+            return True
+        
+        def possible_moves(value,i,j,n,m):
+            
+            range_row , range_column = self.compute_location(i,j,n,m)
+            if(value > (n*m+1) and value < 1):
+                return False
+            
+            for row in range (n):
+                if(game_state.board.get((row,j))== value ):
+                    return False
+            for column in range(m):
+                if(game_state.board.get((i,column))==value ):
                     return False
                 
             for row in range (range_row[0], range_row[1]):
@@ -105,7 +129,9 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
             return game_state.board.get((i, j)) == SudokuBoard.empty \
                    and not TabooMove((i, j), value) in game_state.taboo_moves \
                        and (i, j) in game_state.player_squares() \
-                           and possible_moves(value, i, j,n,m)
+                           and possible_columns(value, j) \
+                               and possible_rows(value, i) 
+                                   
 
         all_moves = [Move((i, j), value) for i in range(N) for j in range(N)
                      for value in range(1, N+1) if possible(i, j, value)]
@@ -113,7 +139,9 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         self.propose_move(move)
         while True:
             time.sleep(0.2)
-            self.propose_move(random.choice(all_moves))
+            all_moves_up=[Move((i, j), value) for i in range(N) for j in range(N)
+                         for value in range(1, N+1) if possible(i, j, value)]
+            self.propose_move(random.choice(all_moves_up))
 
 
 # Given i and j ,function to find which rectangle it belongs to 
@@ -127,73 +155,6 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         range_column = [m * (y - 1), m * y]
 
         return range_row, range_column
-    
-    def possible_moves(self,value,i,j,n,m,game_state : GameState):
-        x = math.ceil(i / n)
-        y = math.ceil(j / m)
-        range_row , range_column = self.compute_location(i,j,n,m)
-        if(value > n*m and value < 1):
-            return False
-        
-        for row in range (n*m):
-            if(game_state.board.get(row,y)== value ):
-                return False
-            if(game_state.board.get(x,row)==value ):
-                return False
-            
-        for row in range (range_row[0], range_row[1]):
-            for column in range (range_column[0], range_column[1]):
-                if (game_state.board.get(row,column)==value):
-                    return False
-                
-    
-    def score_function(self,value,i,j,n,m,game_state: GameState):
-        sum = self.regions_completed + self.column_completed + self.row_completed
-        if(sum==3):
-            return 7
-        elif (sum==2):
-            return 3
-        elif (sum==1):
-            return 1
-        return 0
-
-
-    def regions_completed(self,value,i,j,n,m,game_state: GameState):
-        
-        range_row , range_column = self.compute_location(i,j,n,m)
-        empty_count=0
-        for row in range (range_row[0], range_row[1]):
-            for column in range (range_column[0], range_column[1]):
-                if (game_state.board.get(row,column)==0):
-                    empty_count+=1
-        
-        if(empty_count==1):
-            return 1
-        return 0
-
-    
-    def column_completed(self,value,i,j,n,m,game_state: GameState):
-        empty_count=0
-        
-        for row in range (n*m):
-            if(game_state.board.get(i,row)== 0):
-                empty_count+=1
-
-        if(empty_count==1):
-            return 1
-        return 0
-
-    def row_completed(self,value,i,j,n,m,game_state: GameState):
-        empty_count = 0
-        
-        for row in range (n*m):
-            if (game_state.board.get(row,j)== 0):
-                empty_count+=1
-        if(empty_count == 1):
-            return 1
-        return 0
-    
-    
     
     
     
