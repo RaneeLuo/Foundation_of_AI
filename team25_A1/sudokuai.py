@@ -20,16 +20,16 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
     # N.B. This is a very naive implementation.
     def compute_best_move(self, game_state: GameState) -> None:
         N = game_state.board.N
-        n= game_state.board.n
-        m= game_state.board.m
+        n= 1
+        m= 2
         
         def compute_location(self,i, j, n, m):
-            x = math.ceil(i / n)
-            y = math.ceil(j / m)
+            x = math.ceil((i+1) / m)
+            y = math.ceil((j+1) / n)
 
             # Getting the range of the boundaries
-            range_row = [n * (x - 1), n * x]
-            range_column = [m * (y - 1), m * y]
+            range_row = [m * (x-1), (m * (x)-1)]
+            range_column = [n * (y-1), (n * (y)-1)]
 
             return range_row, range_column
         
@@ -51,6 +51,14 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         
         def possible_squares(value,i,j,n,m):
             range_row , range_column = self.compute_location(i,j,n,m)
+            print(n)
+            print(i)
+            print(math.ceil(i/n))
+            print(range_row)
+            print(m)
+            print(j)
+            print(math.ceil(j/m))
+            print(range_column)
             for row in range (range_row[0], range_row[1]):
                 for column in range (range_column[0], range_column[1]):
                     if (game_state.board.get((row,column))==value):
@@ -130,7 +138,9 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
                    and not TabooMove((i, j), value) in game_state.taboo_moves \
                        and (i, j) in game_state.player_squares() \
                            and possible_columns(value, j) \
-                               and possible_rows(value, i) 
+                               and possible_rows(value, i) \
+                                   and possible_squares(value, i, j, n, m)
+                                   
                                    
 
         all_moves = [Move((i, j), value) for i in range(N) for j in range(N)
@@ -147,12 +157,13 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
 # Given i and j ,function to find which rectangle it belongs to 
 
     def compute_location(self,i, j, n, m):
-        x = math.ceil(i / n)
-        y = math.ceil(j / m)
+        # Getting the range of the boundaries
+        x = math.ceil((i+1) / m)
+        y = math.ceil((j+1) / n)
 
         # Getting the range of the boundaries
-        range_row = [n * (x - 1), n * x]
-        range_column = [m * (y - 1), m * y]
+        range_row = [m * (x-1), (m * (x)-1)]
+        range_column = [n * (y-1), (n * (y)-1)]
 
         return range_row, range_column
     
