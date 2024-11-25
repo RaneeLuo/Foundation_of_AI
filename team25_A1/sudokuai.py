@@ -3,6 +3,7 @@
 #  https://www.gnu.org/licenses/gpl-3.0.txt)
 
 import random
+import copy
 import time
 from competitive_sudoku.sudoku import GameState, Move, SudokuBoard, TabooMove
 import competitive_sudoku.sudokuai
@@ -14,27 +15,27 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
     Sudoku AI that computes a move for a given sudoku configuration.
     """
 
-    def init(self):
-        super().init()
+    def _init_(self):
+        super()._init_()
 
     # N.B. This is a very naive implementation.
     def compute_best_move(self, game_state: GameState) -> None:
         N = game_state.board.N
-        n= 1
-        m= 2
+        n= game_state.board.n
+        m= game_state.board.m
         
-        def compute_location(self,i, j, n, m):
+        def compute_location(i, j, n, m):
             x = math.ceil((i+1) / m)
             y = math.ceil((j+1) / n)
-
+            
             # Getting the range of the boundaries
-            range_row = [m * (x-1), (m * (x)-1)]
-            range_column = [n * (y-1), (n * (y)-1)]
-
+            range_row = [m * (x-1), ((m * x)-1)]
+            range_column = [n * (y-1), ((n * y)-1)]
+            
             return range_row, range_column
         
         def possible_columns(value, j):
-            if(value > (n*m+1) and value < 1):
+            if(value > (N) and value < 1):
                 return False
             
             for row in range (N):
@@ -50,24 +51,16 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
             return True
         
         def possible_squares(value,i,j,n,m):
-            range_row , range_column = self.compute_location(i,j,n,m)
-            print(n)
-            print(i)
-            print(math.ceil(i/n))
-            print(range_row)
-            print(m)
-            print(j)
-            print(math.ceil(j/m))
-            print(range_column)
-            for row in range (range_row[0], range_row[1]):
-                for column in range (range_column[0], range_column[1]):
+            range_row , range_column = compute_location(i,j,n,m)
+            for row in range (range_row[0], range_row[1]+1):
+                for column in range (range_column[0], range_column[1]+1):
                     if (game_state.board.get((row,column))==value):
                         return False
             return True
         
         def possible_moves(value,i,j,n,m):
             
-            range_row , range_column = self.compute_location(i,j,n,m)
+            range_row , range_column = compute_location(i,j,n,m)
             if(value > (n*m+1) and value < 1):
                 return False
             
@@ -84,32 +77,7 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
                         return False
             return True        
         
-        def score_function(self,value,i,j,n,m):
-            sum = self.regions_completed + self.column_completed + self.row_completed
-            if(sum==3):
-                return 7
-            elif (sum==2):
-                return 3
-            elif (sum==1):
-                return 1
-            return 0
-
-
-        def regions_completed(self,value,i,j,n,m):
-            
-            range_row , range_column = self.compute_location(i,j,n,m)
-            empty_count=0
-            for row in range (range_row[0], range_row[1]):
-                for column in range (range_column[0], range_column[1]):
-                    if (game_state.board.get((row,column))==0):
-                        empty_count+=1
-            
-            if(empty_count==1):
-                return 1
-            return 0
-
-        
-        def column_completed(self,value,i,j,n,m):
+        def column_completed(value,i,j,n,m, game_state):
             empty_count=0
             
             for row in range (n*m):
@@ -119,9 +87,8 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
             if(empty_count==1):
                 return 1
             return 0
-
-
-        def row_completed(self,value,i,j,n,m):
+        
+        def row_completed(value,i,j,n,m, game_state):
             empty_count=0
             
             for row in range (n*m):
@@ -132,11 +99,130 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
                 return 1
             return 0
         
+        def regions_completed(value,i,j,n,m, game_state):
+            
+            range_row , range_column = compute_location(i,j,n,m)
+            empty_count=0
+            for row in range (range_row[0], range_row[1]):
+                for column in range (range_column[0], range_column[1]):
+                    if (game_state.board.get((row,column))==0):
+                        empty_count+=1
+            
+            if(empty_count==1):
+                return 1
+            return 0
+
+
+        def score_function(value,i,j,n,m, game_state):
+            sum = regions_completed(value,i,j,n,m, game_state) + column_completed(value, i, j, n, m, game_state) + row_completed(value, i, j, n, m, game_state)
+            if(sum==3):
+                return 7
+            elif (sum==2):
+                return 3
+            elif (sum==1):
+                return 1
+            return 0
+
+        def possible1(i, j, value, game_state):
+            return (i, j) in game_state.player_squares() \
+                   and not Move((i, j), value) in game_state.taboo_moves \
+                       and game_state.board.get((i, j)) == SudokuBoard.empty \
+                           and possible_columns(value, j) \
+                               and possible_rows(value, i) \
+                                   and possible_squares(value, i, j, n, m)
+        
+
+    
+        
+        def minmax(depth, all_moves, movez, maximizing, game_state, alpha, beta, n, m):
+            if depth == 0:
+                return movez, score_function(movez.value, movez.square[0], movez.square[1], n, m, game_state)
+        
+            # Maximizing player
+            if maximizing:
+                print("here1")
+                val = -1000
+                best_move = None 
+        
+                for next_move in all_moves:
+                    # Apply the move to create a new game state
+                    print("Original state before move:", game_state)
+                    newstate = copy.deepcopy(game_state)
+                    print("New state after deepcopy:", newstate)
+
+                    
+
+                    if newstate.current_player==1:    
+                        newstate.current_player = 2 
+                    else:
+                        newstate.current_player = 1
+                    
+                    print("Board before put():", newstate.board)
+                    newstate.board.put(next_move.square, next_move.value)
+                    print("Board after put():", newstate.board)
+
+                    # Generate updated moves based on the new game state
+                    new_moves = [Move((i, j), value) for i in range(n) for j in range(n)
+                                 for value in range(1, n + 1) if possible1(i, j, value, newstate)]
+        
+                    # Recursive call for the minimizing player
+                    best_move, tmp_val = minmax(depth - 1, new_moves, next_move, False, newstate, alpha, beta, n, m)
+        
+                    # Update the best move and value
+                    if tmp_val > val:
+                        best_move = next_move
+                        val = tmp_val
+        
+                    # Alpha-beta pruning
+                    alpha = max(alpha, val)
+                    if val >= beta:
+                        break
+        
+                return best_move, val
+        
+            # Minimizing player
+            else:
+                print("here2")
+                val = 1000
+                best_move = None
+                for next_move in all_moves:
+                    print("here3")
+                    # Apply the move to create a new game state
+                    print("Original state before move2:", game_state)
+                    newstate = copy.deepcopy(game_state)
+                    print("New state after deepcopy2:", newstate)
+                    if newstate.current_player==1:    
+                        newstate.current_player = 2 
+                    else:
+                        newstate.current_player = 1
+                    print("Board before put()2:", newstate.board)
+                    newstate.board.put(next_move.square, next_move.value)
+                    print("Board after put()2:", newstate.board)
+                    # Generate updated moves based on the new game state
+                    new_moves = [Move((i, j), value) for i in range(n) for j in range(n)
+                                 for value in range(1, n + 1) if possible1(i, j, value, newstate)]
+        
+                    # Recursive call for the maximizing player
+                    best_move, tmp_val = minmax(depth - 1, new_moves, next_move, True, newstate, alpha, beta, n, m)
+        
+                    # Update the best move and value
+                    if tmp_val < val:
+                        best_move = next_move
+                        val = tmp_val
+        
+                    # Alpha-beta pruning
+                    beta = min(beta, val)
+                    if val <= alpha:
+                        break
+        
+                return best_move, val
+
+
         # Check whether a cell is empty, a value in that cell is not taboo, and that cell is allowed
         def possible(i, j, value):
-            return game_state.board.get((i, j)) == SudokuBoard.empty \
-                   and not TabooMove((i, j), value) in game_state.taboo_moves \
-                       and (i, j) in game_state.player_squares() \
+            return (i, j) in game_state.player_squares() \
+                   and not Move((i, j), value) in game_state.taboo_moves \
+                       and game_state.board.get((i, j)) == SudokuBoard.empty \
                            and possible_columns(value, j) \
                                and possible_rows(value, i) \
                                    and possible_squares(value, i, j, n, m)
@@ -145,80 +231,25 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
 
         all_moves = [Move((i, j), value) for i in range(N) for j in range(N)
                      for value in range(1, N+1) if possible(i, j, value)]
-        move = random.choice(all_moves)
+        move, val = minmax(3, all_moves, all_moves[0], True, game_state, -1000, 1000, n, m)
+        #move = random.choice(all_moves)
+        k=1
         self.propose_move(move)
-        while True:
+        while k>=1:
             time.sleep(0.2)
             all_moves_up=[Move((i, j), value) for i in range(N) for j in range(N)
-                         for value in range(1, N+1) if possible(i, j, value)]
-            self.propose_move(random.choice(all_moves_up))
+                          for value in range(1, N+1) if possible(i, j, value)]
+            #self.propose_move(random.choice(all_moves_up))
+            self.propose_move(minmax(k, all_moves_up, all_moves_up[0], True, game_state, -1000, 1000, n, m)[0])
+            k=k+1
 
 
 # Given i and j ,function to find which rectangle it belongs to 
 
-    def compute_location(self,i, j, n, m):
-        # Getting the range of the boundaries
-        x = math.ceil((i+1) / m)
-        y = math.ceil((j+1) / n)
+    
 
-        # Getting the range of the boundaries
-        range_row = [m * (x-1), (m * (x)-1)]
-        range_column = [n * (y-1), (n * (y)-1)]
+        
 
-        return range_row, range_column
     
-    
-    
-    
-#minmax
-MAX,MIN = 1000,-1000
- 
-def minimax(depth, nodeIndex, maximizingPlayer, 
-            values, alpha, beta): 
-    # Terminating condition. i.e 
-    # leaf node is reached 
-    if depth == 3: 
-        return values[nodeIndex] 
- 
-    if maximizingPlayer: 
-      
-        best = MIN
- 
-        # Recur for left and right children 
-        for i in range(0, 2): 
-             
-            val = minimax(depth + 1, nodeIndex * 2 + i, 
-                          False, values, alpha, beta) 
-            best = max(best, val) 
-            alpha = max(alpha, best) 
- 
-            # Alpha Beta Pruning 
-            if beta <= alpha: 
-                break
-          
-        return best 
-      
-    else:
-        best = MAX
- 
-        # Recur for left and 
-        # right children 
-        for i in range(0, 2): 
-          
-            val = minimax(depth + 1, nodeIndex * 2 + i, 
-                            True, values, alpha, beta) 
-            best = min(best, val) 
-            beta = min(beta, best) 
- 
-            # Alpha Beta Pruning 
-            if beta <= alpha: 
-                break
-          
-        return best 
-      
-# Driver Code 
-if __name__ == "__main__": 
-  
-    values = [3, 5, 6, 9, 1, 2, 0, -1]  
-    print("The optimal value is :", minimax(0, 0, True, values, MIN, MAX)) 
-     
+   
+
