@@ -15,9 +15,10 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
     Sudoku AI that computes a move for a given sudoku configuration.
     """
 
-    def _init_(self):
-        super()._init_()
-
+    def init(self):
+        super().init()
+    
+        
     # N.B. This is a very naive implementation.
     def compute_best_move(self, game_state: GameState) -> None:
         N = game_state.board.N
@@ -34,222 +35,191 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
             
             return range_row, range_column
         
-        def possible_columns(value, j):
+        def possible_columns(value, j, current_state):
             if(value > (N) and value < 1):
                 return False
             
             for row in range (N):
-                if(game_state.board.get((row,j))== value ):
+                if(current_state.board.get((row,j))== value ):
                     return False
             return True
         
-        def possible_rows(value, i):
+        def possible_rows(value, i, current_state):
             
             for row in range (N):
-                if(game_state.board.get((i,row))== value ):
+                if(current_state.board.get((i,row))== value ):
                     return False
             return True
         
-        def possible_squares(value,i,j,n,m):
+        def possible_squares(value,i,j,n,m, current_state):
             range_row , range_column = compute_location(i,j,n,m)
             for row in range (range_row[0], range_row[1]+1):
                 for column in range (range_column[0], range_column[1]+1):
-                    if (game_state.board.get((row,column))==value):
+                    if (current_state.board.get((row,column))==value):
                         return False
             return True
         
-        def possible_moves(value,i,j,n,m):
-            
-            range_row , range_column = compute_location(i,j,n,m)
-            if(value > (n*m+1) and value < 1):
-                return False
-            
-            for row in range (n):
-                if(game_state.board.get((row,j))== value ):
-                    return False
-            for column in range(m):
-                if(game_state.board.get((i,column))==value ):
-                    return False
-                
-            for row in range (range_row[0], range_row[1]):
-                for column in range (range_column[0], range_column[1]):
-                    if (game_state.board.get((row,column))==value):
-                        return False
-            return True        
+     
         
-        def column_completed(value,i,j,n,m, game_state):
+        def column_completed(value,i,j,n,m, gamestate):
             empty_count=0
             
             for row in range (n*m):
-                if(game_state.board.get((i,row))== 0):
+                if(gamestate.board.get((i,row))==  SudokuBoard.empty):
                     empty_count+=1
 
-            if(empty_count==1):
+            if(empty_count==0):
                 return 1
             return 0
         
-        def row_completed(value,i,j,n,m, game_state):
+        def row_completed(value,i,j,n,m, gamestate):
             empty_count=0
             
             for row in range (n*m):
-                if(game_state.board.get((row,j))== 0):
+                if(gamestate.board.get((row,j))== SudokuBoard.empty):
                     empty_count+=1
 
-            if(empty_count==1):
+            if(empty_count==0):
                 return 1
             return 0
         
-        def regions_completed(value,i,j,n,m, game_state):
+        def regions_completed(value,i,j,n,m, gamestate):
             
             range_row , range_column = compute_location(i,j,n,m)
             empty_count=0
-            for row in range (range_row[0], range_row[1]):
-                for column in range (range_column[0], range_column[1]):
-                    if (game_state.board.get((row,column))==0):
+            for row in range (range_row[0], range_row[1]+1):
+                for column in range (range_column[0], range_column[1]+1):
+                    if (gamestate.board.get((row,column)) ==  SudokuBoard.empty):
                         empty_count+=1
-            
-            if(empty_count==1):
+            if(empty_count==0):
                 return 1
             return 0
 
 
-        def score_function(value,i,j,n,m, game_state):
-            sum = regions_completed(value,i,j,n,m, game_state) + column_completed(value, i, j, n, m, game_state) + row_completed(value, i, j, n, m, game_state)
-            if(sum==3):
+        def score_function(value,i,j,n,m, gamestate):
+            summa = regions_completed(value,i,j,n,m, gamestate) + column_completed(value, i, j, n, m, gamestate) + row_completed(value, i, j, n, m, gamestate)
+            if(summa==3):
                 return 7
-            elif (sum==2):
+            elif (summa==2):
                 return 3
-            elif (sum==1):
+            elif (summa==1):
                 return 1
             return 0
 
-        def possible1(i, j, value, game_state):
-            return (i, j) in game_state.player_squares() \
-                   and not Move((i, j), value) in game_state.taboo_moves \
-                       and game_state.board.get((i, j)) == SudokuBoard.empty \
-                           and possible_columns(value, j) \
-                               and possible_rows(value, i) \
-                                   and possible_squares(value, i, j, n, m)
+
         
 
     
         
-        def minmax(depth, all_moves, movez, maximizing, game_state, alpha, beta, n, m):
+        def minmax(depth, all_moves, move, maximizing, current_state, n, m, alpha, beta):
+        
             if depth == 0:
-                return movez, score_function(movez.value, movez.square[0], movez.square[1], n, m, game_state)
-        
-            # Maximizing player
-            if maximizing:
-                print("here1")
-                val = -1000
-                best_move = None 
-        
-                for next_move in all_moves:
-                    # Apply the move to create a new game state
-                    print("Original state before move:", game_state)
-                    newstate = copy.deepcopy(game_state)
-                    print("New state after deepcopy:", newstate)
+                #return score_function(move.value, move.square[0], move.square[1],n,m, current_state), move
+                return current_state.scores[0]-current_state.scores[1], move
+            if len(all_moves) == 0:
+                return current_state.scores[0]-current_state.scores[1], move
+            
+            bestmove = None
+            #max player
+            if maximizing == True:
+                maxval = -1000
+                for cur_move in all_moves:
+                    newstate = copy.deepcopy(current_state)
 
-                    
+                    newstate.board.put(cur_move.square, cur_move.value)
 
-                    if newstate.current_player==1:    
-                        newstate.current_player = 2 
+                    if (newstate.current_player == 1):
+                        newstate.current_player = 2
                     else:
                         newstate.current_player = 1
-                    
-                    print("Board before put():", newstate.board)
-                    newstate.board.put(next_move.square, next_move.value)
-                    print("Board after put():", newstate.board)
+ 
+                    calculated_score_1 = score_function(cur_move.value, cur_move.square[0], cur_move.square[1], n, m, newstate)
+                    newstate.scores[0] += calculated_score_1
+                    updated_moves = [Move((i, j), value) for i in range(N) for j in range(N)
+                                     for value in range(1, N+1) if possible(i, j, value, newstate)]
 
-                    # Generate updated moves based on the new game state
-                    new_moves = [Move((i, j), value) for i in range(n) for j in range(n)
-                                 for value in range(1, n + 1) if possible1(i, j, value, newstate)]
-        
-                    # Recursive call for the minimizing player
-                    best_move, tmp_val = minmax(depth - 1, new_moves, next_move, False, newstate, alpha, beta, n, m)
-        
-                    # Update the best move and value
-                    if tmp_val > val:
-                        best_move = next_move
-                        val = tmp_val
-        
-                    # Alpha-beta pruning
-                    alpha = max(alpha, val)
-                    if val >= beta:
+                    tmp_val, tmp_move= minmax(depth-1, updated_moves, cur_move, False, newstate, n, m, alpha, beta)
+                    newstate.scores[0] = newstate.scores[0] - calculated_score_1
+
+                    if tmp_val>= maxval:
+                        maxval = tmp_val
+                        bestmove = cur_move
+                        
+                        
+                    alpha = max(alpha,maxval)
+                    if alpha >= beta:
                         break
-        
-                return best_move, val
-        
-            # Minimizing player
-            else:
-                print("here2")
-                val = 1000
-                best_move = None
-                for next_move in all_moves:
-                    print("here3")
-                    # Apply the move to create a new game state
-                    print("Original state before move2:", game_state)
-                    newstate = copy.deepcopy(game_state)
-                    print("New state after deepcopy2:", newstate)
-                    if newstate.current_player==1:    
-                        newstate.current_player = 2 
+                #cur_score = cur_score + tmp_val
+                return maxval, bestmove
+            
+            if maximizing == False:
+                minval = 1000
+                for cur_move in all_moves:
+                                     
+                    newstate = copy.deepcopy(current_state)
+
+                    newstate.board.put(cur_move.square,cur_move.value)
+
+                    if (newstate.current_player == 1):
+                        newstate.current_player = 2
                     else:
                         newstate.current_player = 1
-                    print("Board before put()2:", newstate.board)
-                    newstate.board.put(next_move.square, next_move.value)
-                    print("Board after put()2:", newstate.board)
-                    # Generate updated moves based on the new game state
-                    new_moves = [Move((i, j), value) for i in range(n) for j in range(n)
-                                 for value in range(1, n + 1) if possible1(i, j, value, newstate)]
-        
-                    # Recursive call for the maximizing player
-                    best_move, tmp_val = minmax(depth - 1, new_moves, next_move, True, newstate, alpha, beta, n, m)
-        
-                    # Update the best move and value
-                    if tmp_val < val:
-                        best_move = next_move
-                        val = tmp_val
-        
-                    # Alpha-beta pruning
-                    beta = min(beta, val)
-                    if val <= alpha:
+
+                    calculated_score_2 = score_function(cur_move.value, cur_move.square[0], cur_move.square[1], n, m, newstate)
+                    newstate.scores[1] += calculated_score_2
+                    updated_moves =  [Move((i, j), value) for i in range(N) for j in range(N)
+                                     for value in range(1, N+1) if possible(i, j, value, newstate)]
+
+                    tmp_val, tmp_move = minmax(depth-1, updated_moves, cur_move, True, newstate, n, m,alpha, beta)
+                    newstate.scores[1] = newstate.scores[1] - calculated_score_2
+
+                    if tmp_val < minval:
+                        minval=tmp_val
+                        bestmove = cur_move
+                        
+                        
+                    beta = min(beta, minval)
+                    if beta <= alpha:
                         break
-        
-                return best_move, val
+                #cur_score = cur_score-minval
 
-
+                return minval, bestmove
+                    
+                
         # Check whether a cell is empty, a value in that cell is not taboo, and that cell is allowed
-        def possible(i, j, value):
-            return (i, j) in game_state.player_squares() \
-                   and not Move((i, j), value) in game_state.taboo_moves \
-                       and game_state.board.get((i, j)) == SudokuBoard.empty \
-                           and possible_columns(value, j) \
-                               and possible_rows(value, i) \
-                                   and possible_squares(value, i, j, n, m)
+        def possible(i, j, value, current_state):
+            return (i, j) in current_state.player_squares() \
+                   and not TabooMove((i, j), value) in current_state.taboo_moves \
+                       and current_state.board.get((i, j)) == SudokuBoard.empty \
+                           and possible_columns(value, j, current_state) \
+                               and possible_rows(value, i, current_state) \
+                                   and possible_squares(value, i, j, n, m, current_state)
+                                   
+        def possible1(i, j, value, current_state):
+            return (i, j) in current_state.allowed_squares1 \
+                   and not TabooMove((i, j), value) in current_state.taboo_moves \
+                       and current_state.board.get((i, j)) == SudokuBoard.empty \
+                           and possible_columns(value, j, current_state) \
+                               and possible_rows(value, i, current_state) \
+                                   and possible_squares(value, i, j, n, m, current_state)    
                                    
                                    
-
+        def possible2(i, j, value, current_state):
+            return (i, j) in current_state.allowed_squares2 \
+                   and not TabooMove((i, j), value) in current_state.taboo_moves \
+                       and current_state.board.get((i, j)) == SudokuBoard.empty \
+                           and possible_columns(value, j, current_state) \
+                               and possible_rows(value, i, current_state) \
+                                   and possible_squares(value, i, j, n, m, current_state)  
+                                   
         all_moves = [Move((i, j), value) for i in range(N) for j in range(N)
-                     for value in range(1, N+1) if possible(i, j, value)]
-        move, val = minmax(3, all_moves, all_moves[0], True, game_state, -1000, 1000, n, m)
+                     for value in range(1, N+1) if possible(i, j, value, game_state)]
+        k=0
+        for k in range(30):
+            move = minmax(k, all_moves, all_moves[0], True, game_state, n, m, -math.inf,math.inf)[1]
         #move = random.choice(all_moves)
-        k=1
-        self.propose_move(move)
-        while k>=1:
-            time.sleep(0.2)
-            all_moves_up=[Move((i, j), value) for i in range(N) for j in range(N)
-                          for value in range(1, N+1) if possible(i, j, value)]
-            #self.propose_move(random.choice(all_moves_up))
-            self.propose_move(minmax(k, all_moves_up, all_moves_up[0], True, game_state, -1000, 1000, n, m)[0])
-            k=k+1
-
-
-# Given i and j ,function to find which rectangle it belongs to 
-
-    
-
+            
+            self.propose_move(move)
+            
         
-
-    
-   
 
